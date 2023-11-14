@@ -1,0 +1,37 @@
+## YAML Template.
+---
+server:
+    port: 8090
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka}
+logging:
+  level:
+    org.springframework.clud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
+spring:
+  application:
+    name: apigateway
+  cloud:
+    gateway:
+      routes:
+      - id: cliente_rol
+        uri: lb://negocio-cliente
+        predicates:
+        - Path=/cliente/rol/**
+        filters:
+        - name: AutenticacionFiltro  
+        
+      - id: cliente_servicio
+        uri: lb://negocio-cliente
+        predicates:
+        - Path=/**
+        
+      - id: transaction-servicio
+        uri: lb://negocio-transacciones
+        predicates:
+        - Path=/transaccion/**
+        - Method=GET,POST,PUT,DELETE
+        filters:
+        - name: AutenticacionFiltro  

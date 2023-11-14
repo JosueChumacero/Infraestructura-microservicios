@@ -7,25 +7,20 @@ package com.core.cliente.servicio.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.core.cliente.entidad.Cliente;
 import com.core.cliente.entidad.ClienteProducto;
+import com.core.cliente.excepcion.ExcepcionNegocio;
 import com.core.cliente.repositorio.ClienteRepositorio;
+import com.core.cliente.rest.RestProducto;
+import com.core.cliente.rest.RestTransaccion;
 import com.core.cliente.servicio.ClienteServicio;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.handler.timeout.WriteTimeoutHandler;
-import java.time.Duration;
-import java.util.Collections;
+import java.net.UnknownHostException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
 
 /**
  *
@@ -36,23 +31,10 @@ public class ClienteServicioImpl implements ClienteServicio {
 
     @Autowired
     private ClienteRepositorio clienteRepositorio;
-
-    private final WebClient.Builder webClientBuilder;
-
-    public ClienteServicioImpl(WebClient.Builder webClientBuilder) {
-        this.webClientBuilder = webClientBuilder;
-    }
-
-    HttpClient client = HttpClient.create()
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-            .option(ChannelOption.SO_KEEPALIVE, true)
-            .option(EpollChannelOption.TCP_KEEPIDLE, 300)
-            .option(EpollChannelOption.TCP_KEEPINTVL, 60)
-            .responseTimeout(Duration.ofSeconds(1))
-            .doOnConnected(connection -> {
-                connection.addHandlerLast(new ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS));
-                connection.addHandlerLast(new WriteTimeoutHandler(5000, TimeUnit.MILLISECONDS));
-            });
+    @Autowired
+    private RestTransaccion restTransaccion;
+    @Autowired
+    private RestProducto restProducto;
 
     @Override
     public List<Cliente> buscarTodo() {
@@ -60,16 +42,28 @@ public class ClienteServicioImpl implements ClienteServicio {
     }
 
     @Override
-    public Cliente guardar(Cliente cliente) {
+    public Cliente guardar(Cliente cliente) throws ExcepcionNegocio, UnknownHostException {
+        for (Iterator<ClienteProducto> iterator = cliente.getProductos().iterator(); iterator.hasNext();) {
+            ClienteProducto prod = iterator.next();
+            String nombreProducto;
+            nombreProducto = restProducto.getProductName(prod.getProductoId());
+            if (nombreProducto.isBlank()) {
+                throw new ExcepcionNegocio("Error Validacion, producto no existe", HttpStatus.PRECONDITION_FAILED);
+            } else {
+                prod.setCliente(cliente);
+            }
+        }
         return clienteRepositorio.save(cliente);
     }
 
     @Override
-    public Optional<Cliente> buscarPorId(long id) {
+    public Optional<Cliente> buscarPorId(long id) throws ExcepcionNegocio, UnknownHostException {
         Optional<Cliente> cliente = clienteRepositorio.findById(id);
         if (cliente.isPresent()) {
-            cliente.get().getProductos().forEach(x -> x.setNombreProducto(getProductName(x.getProductoId())));
-            List<?> transacciones = getTransacciones(cliente.get().getCuenta());
+            for (ClienteProducto producto : cliente.get().getProductos()) {
+                producto.setNombreProducto(restProducto.getProductName(producto.getProductoId()));
+            }
+            List<?> transacciones = restTransaccion.getTransacciones(cliente.get().getCuenta());
             cliente.get().setTransactions(transacciones);
         }
         return cliente;
@@ -78,36 +72,5 @@ public class ClienteServicioImpl implements ClienteServicio {
     @Override
     public void eliminar(Cliente cliente) {
         clienteRepositorio.delete(cliente);
-    }
-
-    private String getProductName(long id) {
-
-        WebClient build = webClientBuilder.clientConnector(new ReactorClientHttpConnector(client))
-                .baseUrl("http://negocio-producto/producto")
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultUriVariables(Collections.singletonMap("url", "http://negocio-producto/producto"))
-                .build();
-
-        JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
-                .retrieve().bodyToMono(JsonNode.class).block();
-
-        String name = block.get("nombre").asText();
-
-        return name;
-    }
-
-    private List<?> getTransacciones(String cuenta) {
-        WebClient build = webClientBuilder.clientConnector(new ReactorClientHttpConnector(client))
-                .baseUrl("http://negocio-transacciones/transaccion")
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build();
-
-        List<?> transacciones = build.method(HttpMethod.GET).uri(uriBuilder -> uriBuilder
-                .path("/cliente/transacciones")
-                .queryParam("cuenta", cuenta)
-                .build())
-                .retrieve().bodyToFlux(Object.class).collectList().block();
-
-        return transacciones;
     }
 }

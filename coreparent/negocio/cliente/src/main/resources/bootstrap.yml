@@ -5,7 +5,7 @@ springdoc:
       path: /swagger/index.html
       enabled: true
 server:
-    port: 8084
+    port: 0
 eureka:
   client:
     serviceUrl:

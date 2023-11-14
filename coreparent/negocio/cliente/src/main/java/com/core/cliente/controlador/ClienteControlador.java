@@ -5,7 +5,9 @@
 package com.core.cliente.controlador;
 
 import com.core.cliente.entidad.Cliente;
+import com.core.cliente.excepcion.ExcepcionNegocio;
 import com.core.cliente.servicio.ClienteServicio;
+import java.net.UnknownHostException;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.List;
@@ -46,12 +48,12 @@ public class ClienteControlador {
     }
 
     @GetMapping("/{id}")
-    public Cliente get(@PathVariable long id) {
+    public Cliente get(@PathVariable long id) throws ExcepcionNegocio, UnknownHostException {
         return clienteServicio.buscarPorId(id).get();
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> put(@PathVariable long id, @RequestBody Cliente cliente) {
+    public ResponseEntity<?> put(@PathVariable long id, @RequestBody Cliente cliente) throws ExcepcionNegocio, UnknownHostException {
         Optional<Cliente> clienteBase = clienteServicio.buscarPorId(id);
         if (clienteBase.isPresent()) {
             clienteBase.get().setApellidos(cliente.getApellidos() != null ? cliente.getApellidos() : clienteBase.get().getApellidos());
@@ -67,14 +69,13 @@ public class ClienteControlador {
     }
 
     @PostMapping
-    public ResponseEntity<Cliente> post(@RequestBody Cliente cliente) {
-        cliente.getProductos().forEach(x -> x.setCliente(cliente));
+    public ResponseEntity<Cliente> post(@RequestBody Cliente cliente) throws ExcepcionNegocio, UnknownHostException  {
         Cliente clienteBase = clienteServicio.guardar(cliente);
         return ResponseEntity.ok(clienteBase);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable long id) {
+    public ResponseEntity<?> delete(@PathVariable long id) throws ExcepcionNegocio, UnknownHostException {
         Optional<Cliente> cliente = clienteServicio.buscarPorId(id);
         if (cliente.isPresent()) {
             clienteServicio.eliminar(cliente.get());

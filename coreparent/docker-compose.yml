@@ -58,6 +58,48 @@ services:
       - registry-discovery
     ports:
       - 8762:8762
+
+##########################################################################     
+ #apigateway service
+ ##########################################################################  
+  apigateway:
+    container_name: id-apigateway
+    image: core/microservice-docker-apigateway:0.0.1-SNAPSHOT
+    networks:
+      - spring
+      #All projets will have a variable value  DEUREKA_SERVER this tell where find a registry-discovery server 
+    environment:
+      - JAVA_OPTS=
+         -Xms256M 
+         -Xmx256M
+         -DEUREKA_SERVER=http://registry-discovery:8761/eureka/
+         #-Dspring.cloud.config.server.native.searchLocations=/var/config-data
+    depends_on:
+      - registry-discovery
+    ports:
+      - 8090:8090
+ 
+ ##########################################################################     
+ #keycloack service
+ ##########################################################################  
+  keycloack:
+    container_name: keycloackAdapter
+    image: core/microservice-docker-keycloackadapter:0.0.1-SNAPSHOT
+    networks:
+      - spring
+      #All projets will have a variable value  DEUREKA_SERVER this tell where find a registry-discovery server 
+    environment:
+      - JAVA_OPTS=
+         -Xms256M 
+         -Xmx256M
+         -DEUREKA_SERVER=http://registry-discovery:8761/eureka/
+         -DKEYCLOACK_SERVER=http://keycloack_server:8080/auth/realms/
+         -DKEYCLOACK_REAL_ID=12s5dFuoDt6trTNhYWkxy_Q-XCpxEgv-S7EKHkvZnMY
+         #-Dspring.cloud.config.server.native.searchLocations=/var/config-data
+    depends_on:
+      - registry-discovery
+    ports:
+      - 8088:8088
       
  ##########################################################################     
  #product service
@@ -96,8 +138,6 @@ services:
     depends_on:
       - registry-discovery
       - configuration
-    ports:
-      - 8084:8084
       
  ##########################################################################     
  #transaction service
@@ -118,6 +158,22 @@ services:
       - configuration
     ports:
       - 8082:8082   
+ 
+ ##########################################################################     
+ #keycloack Server
+ ##########################################################################  
+  keycloack_server:
+    container_name: id-keycloackServer
+    image: jboss/keycloak
+    restart: always
+    networks:
+      - spring
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      DB_VENDOR: H2
+    ports:
+      - 8091:8080 
       
  ##########################################################################     
  #database service
@@ -159,8 +215,4 @@ services:
 networks:
   spring:
     name: spring
-
-      
-
-
-    
+  

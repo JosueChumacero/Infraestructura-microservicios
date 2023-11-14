@@ -5,6 +5,8 @@
 package com.core.cliente.servicio;
 
 import com.core.cliente.entidad.Cliente;
+import com.core.cliente.excepcion.ExcepcionNegocio;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,7 +17,7 @@ import java.util.Optional;
 public interface ClienteServicio {
     
     List<Cliente> buscarTodo();
-    Cliente guardar(Cliente cliente);
-    Optional<Cliente> buscarPorId(long id);
+    public Cliente guardar(Cliente cliente) throws ExcepcionNegocio,UnknownHostException ;
+    Optional<Cliente> buscarPorId(long id) throws ExcepcionNegocio, UnknownHostException;
     void eliminar(Cliente cliente);
 }

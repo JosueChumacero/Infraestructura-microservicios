@@ -4,9 +4,18 @@
  */
 package com.core.facturacion.controlador;
 
+import com.core.facturacion.dto.FacturaRequest;
+import com.core.facturacion.dto.FacturaResponse;
+import com.core.facturacion.entidad.Factura;
+import com.core.facturacion.servicio.FacturaServicio;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,28 +28,37 @@ import org.springframework.web.bind.annotation.PutMapping;
  *
  * @author tony_
  */
+@Tag(name = "Facturacion API", description = "Api solo para utilidades de facturación")
 @RestController
 @RequestMapping("/facturacion")
-public class Facturacion {
+public class FacturacionControlador {
     
+    @Autowired
+    private FacturaServicio facturaServicio;
+    
+    @Operation(description = "Devuelve todas las facturas", summary = "Return 204 si no hay datos")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Exito")})
+    @ApiResponse(responseCode = "500", description = "Internal Error")
     @GetMapping()
-    public List<Object> list() {
-        return null;
+    public List<FacturaResponse> list() {
+        return facturaServicio.buscarTodo();
     }
     
     @GetMapping("/{id}")
-    public Object get(@PathVariable String id) {
+    public Factura get(@PathVariable String id) {
         return null;
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<?> put(@PathVariable String id, @RequestBody Object input) {
-        return null;
+    public ResponseEntity<FacturaResponse> put(@PathVariable String id, @RequestBody FacturaRequest input) {
+        FacturaResponse factura = facturaServicio.guardar(input);
+        return ResponseEntity.ok(factura);
     }
     
     @PostMapping
-    public ResponseEntity<?> post(@RequestBody Object input) {
-        return null;
+    public ResponseEntity<FacturaResponse> post(@RequestBody FacturaRequest input) {
+       FacturaResponse factura = facturaServicio.guardar(input);
+        return ResponseEntity.ok(factura);
     }
     
     @DeleteMapping("/{id}")
